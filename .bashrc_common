@@ -1,0 +1,292 @@
+#### PATH MODIFICATIONS ####
+export PATH=$HOME/bin:$PATH
+
+#### ALIASES ####
+
+# run last command with sudo
+alias plz='sudo $(history -p !!)'
+alias ta='tmx attach -d || tmx new'
+alias na="$EDITOR ~/.bash_aliases"
+alias sb='source ~/.bash_aliases'
+# because oops
+alias sl='ls'
+alias gs='git status'
+alias gd='git diff'
+alias gdc='git diff --cached'
+alias ll='ls -alF'
+alias la='ls -A'
+alias l='ls -CF'
+
+# super cool thing that auto-expands !! so that you can inspace before executing.
+# also useful for stuff like !echo to pull the last command starting with echo.
+bind Space:magic-space
+
+#### FUNCTIONS ####
+
+function mkcd {
+    mkdir $1
+    cd $1
+}
+
+# up n goes up n directories from the current directory
+function up {
+  for i in $(seq 1 $1);
+    do cd ..;
+  done
+}
+
+# makes a backup of $1
+# TODO throw error is $1 is not provided
+function pcp {
+    choice=$1
+    backup=$choice"_backup"
+    cp $choice $backup
+}
+
+# removes the backup of $1
+# TODO throw error is $1 is not provided
+function prm {
+    choice=$1
+    backup=$choice"_backup"
+    rm $backup
+}
+
+#### TESTING SCRIPTS ####
+
+export testpath='$HOME/test/'
+
+function testhelp {
+    echo "    Use mktest [testname] to make a new test.
+    Use otest [testname] to open and edit [testname].
+    Use rtest to run the most recent test that was created.
+    Use dtest to run the most recent test that was created using the perl debugger.
+    Use lstest to list all the tests in the directory."
+}
+
+
+function mktest {
+    if [[ $1 ]]
+    then
+        filename="$testpath$1"
+        if ! [[ -e $filename ]]
+        then
+            touch $filename
+            $EDITOR $filename
+        else
+            echo "$filename already exists."
+        fi
+    else
+        echo "You must provide a testname."
+    fi
+}
+
+# enable tab complete on $testpath when using the otest command
+function _codeComplete {
+    local cur=${COMP_WORDS[COMP_CWORD]}
+    COMPREPLY=( $(compgen -W "$(ls $testpath)" -- $cur) )
+}
+
+complete -F _codeComplete otest
+
+# opens a test in the test directory. Tab complete enabled
+function otest {
+    if [[ $1 ]]
+    then
+        filename="$testpath$1"
+        if [[ -e $filename ]]
+        then
+            $EDITOR $filename
+        else
+            echo "$filename does not exist."
+        fi
+    else
+        $EDITOR "$testpath$(ls -1 $testpath | tail -n 1)"
+    fi
+}
+# Runs the most recent test that was created/opened
+function rtest {
+    $test_file="$testpath$(ls -1 $testpath | tail -n 1)"
+    if ! [[ $test_file ]]
+    then
+        echo "\$test_file hasn't been set."
+    else
+        perl "$testpath$test_file"
+    fi
+}
+
+# lists all the created tests
+function lstest {
+    ls -c $testpath
+}
+
+
+#### NOTE-TAKING ####
+
+
+export notespath='$HOME/notes/'
+
+function noteshelp {
+    echo "    Use mknote [notename] to take a new note.
+    Use onote [notename] to open and edit [notename].
+    Use mknote [notename] to make a new note called [notename].
+    Use lsnotes to list all the notes in the directory."
+}
+
+
+function mknote {
+    if [[ $1 ]]
+    then
+        notename="$notespath$1"
+        if ! [[ -e $notename ]]
+        then
+            touch $notename
+            $EDITOR $notename
+        else
+            echo "$notename already exists."
+        fi
+    else
+        echo "You must provide a notename."
+    fi
+}
+
+# enable tab complete on the ~/notes folder when using the onote command
+function _codeComplete2 {
+    local cur=${COMP_WORDS[COMP_CWORD]}
+    COMPREPLY=( $(compgen -W "$(ls ~/notes/)" -- $cur) )
+}
+
+complete -F _codeComplete2 onote
+
+# opens a note in the notes directory by name. Tab complete enabled
+function onote {
+    if [[ $1 ]]
+    then
+        filename="$notespath$1"
+        if [[ -e $filename ]]
+        then
+            $EDITOR $filename
+        else
+            echo "$filename does not exist."
+        fi
+    else
+        $EDITOR "$notespath$(ls -1 $notespath | tail -n 1)"
+    fi
+}
+
+
+#### LOGGING ####
+
+logspath='$HOME/logs/'
+
+function mklog {
+    timestamp=$(date +'%Y-%m-%d-%T')
+    logname="$logspath$timestamp"
+    if ! [[ -e $logname ]]
+    then
+        touch $logname
+        # $EDITOR $logname
+    else
+        echo "$logname already exists."
+    fi
+    attachlog $1
+}
+
+# grab the newest log file
+function olog {
+    if ! [[ $1 ]]
+    then 
+        nth=1
+    else
+        nth=$1
+    fi
+    $EDITOR "$logspath$(ls -1 $logspath | tail -n $nth)"
+}
+
+# grab the newest log file
+function lslogs {
+    ls -c $logspath | head
+}
+
+#### HISTORY AND CTRL+R ####
+
+# incremental history for control+r
+export PROMPT_COMMAND='history -a'
+export HISTSIZE=10000000
+export EDITOR=subl
+export P4DIFF='gvimdiff -f -R'
+
+# Avoid duplicates
+export HISTCONTROL=ignoredups:erasedups  
+export WITH_DEXPREOPT=false
+# When the shell exits, append to the history file instead of overwriting it
+shopt -s histappend
+
+# After each command, append to the history file and reread it
+export PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND$'\n'}history -a; history -c; history -r"
+
+############################ ANDROID STUFF
+
+# when using an emulator and not a real device, comment this line
+alias adbe='adb'
+alias goboot='adbe reboot bootloader'
+alias ad='adbe devices'
+alias clrlog='adbe logcat -c'
+alias asd='adbe shell dumpsys'
+
+function check-for-android-device() {
+  NOT_PRESENT="List of devices attached"
+  ADB_FOUND=`adbe devices | tail -2 | head -1 | cut -f 1 | sed 's/ *$//g'`
+
+  if [[ ${ADB_FOUND} == ${NOT_PRESENT} ]]; then
+    return 1
+  else
+    return 0
+  fi
+}
+
+function pushblue {
+    gofeld
+    cd ./packages/apps/Bluetooth/ &&
+    check-for-android-device
+    if [ $? -ne 0 ]
+    then
+        echo "No device found."
+        return
+    fi
+    mma -j86
+    if [ $? -ne 0 ]
+    then
+        echo "There was a build error."
+        return
+    fi
+    m -j86 ClockworkBluetooth
+    if [ $? -ne 0 ]
+    then
+        echo "There was a build error."
+        return
+    fi
+    adbe root
+    fwd
+    adbe remount
+    echo "pushing bluetooth apk"
+    fwd
+    adbe push $OUT/system/app/Bluetooth/Bluetooth.apk /system/app/Bluetooth/Bluetooth.apk
+    fwd
+    echo "pushing ClockworkBluetooth apk"
+    adbe install -r /usr/local/google_ssd/dev/feldspar-dev/out/target/product/$device/system/priv-app/ClockworkBluetooth/ClockworkBluetooth.apk
+    fwd
+    echo "force stopping bluetooth"
+    adbe shell am force-stop com.android.bluetooth
+}
+
+function pushcblue {
+    # fwd
+    adbe root
+    adbe remount
+    adbe push $OUT/system/lib/hw/bluetooth.default.so /system/lib/hw/bluetooth.default.so
+}
+
+function fwd {
+    adbe -d forward tcp:4444 localabstract:/adb-hub
+    adbe connect 127.0.0.1:4444
+}
