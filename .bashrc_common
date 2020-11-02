@@ -1,6 +1,9 @@
 #### PATH MODIFICATIONS ####
 export PATH=$HOME/bin:$PATH
 
+#### PS1 MODIFICATIONS ####
+export PS1='\[\e[32;40m\]\t \[\e[m\]\[\e[37m\]\w\[\e[m\] $'
+
 #### ALIASES ####
 
 # run last command with sudo
